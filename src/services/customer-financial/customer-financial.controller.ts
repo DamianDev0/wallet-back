@@ -23,9 +23,7 @@ export class CustomerFinancialController {
   @Post('widget/token')
   @HttpCode(HttpStatus.OK)
   async getWidgetToken(@Param('customerId') customerId: string) {
-    this.logger.log(
-      `Endpoint: POST /customers/${customerId}/financial/widget/token`,
-    );
+ 
     return this.customerFinancialService.createWidgetToken(customerId);
   }
 
@@ -35,34 +33,25 @@ export class CustomerFinancialController {
     @Param('customerId') customerId: string,
     @Body('link_id') linkId: string,
   ) {
-    this.logger.log(
-      `Endpoint: POST /customers/${customerId}/financial/link - LinkID: ${linkId}`,
-    );
+   
     return this.customerFinancialService.linkBankAccount(customerId, linkId);
   }
 
   @Delete('unlink')
   @HttpCode(HttpStatus.OK)
   async unlinkBankAccount(@Param('customerId') customerId: string) {
-    this.logger.log(
-      `Endpoint: DELETE /customers/${customerId}/financial/unlink`,
-    );
+  
     return this.customerFinancialService.unlinkBankAccount(customerId);
   }
 
   @Get('status')
   async getBankLinkStatus(@Param('customerId') customerId: string) {
-    this.logger.log(
-      `Endpoint: GET /customers/${customerId}/financial/status`,
-    );
     return this.customerFinancialService.getBankLinkStatus(customerId);
   }
 
   @Get('accounts')
   async getAccounts(@Param('customerId') customerId: string) {
-    this.logger.log(
-      `Endpoint: GET /customers/${customerId}/financial/accounts`,
-    );
+ 
     return this.customerFinancialService.getAccounts(customerId);
   }
 
@@ -72,9 +61,7 @@ export class CustomerFinancialController {
     @Query('date_from') dateFrom?: string,
     @Query('date_to') dateTo?: string,
   ) {
-    this.logger.log(
-      `Endpoint: GET /customers/${customerId}/financial/transactions`,
-    );
+  
     return this.customerFinancialService.getTransactions(
       customerId,
       dateFrom,
@@ -84,17 +71,11 @@ export class CustomerFinancialController {
 
   @Get('balances')
   async getBalances(@Param('customerId') customerId: string) {
-    this.logger.log(
-      `Endpoint: GET /customers/${customerId}/financial/balances`,
-    );
     return this.customerFinancialService.getBalances(customerId);
   }
 
   @Get('summary')
   async getFinancialSummary(@Param('customerId') customerId: string) {
-    this.logger.log(
-      `Endpoint: GET /customers/${customerId}/financial/summary`,
-    );
     return this.customerFinancialService.getFinancialSummary(customerId);
   }
 }
