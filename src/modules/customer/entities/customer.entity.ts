@@ -11,10 +11,7 @@ import * as bcrypt from 'bcrypt';
 @Entity('customers')
 export class Customer extends CommonEntity {
   @Column({ nullable: false })
-  firstName: string;
-
-  @Column({ nullable: false })
-  lastName: string;
+  fullName: string;
 
   @Column({ nullable: false, unique: true })
   @Index()
@@ -35,9 +32,5 @@ export class Customer extends CommonEntity {
     if (this.password && !this.password.startsWith('$2b$')) {
       this.password = await bcrypt.hash(this.password, 10);
     }
-  }
-
-  get fullName(): string {
-    return `${this.firstName} ${this.lastName}`;
   }
 }

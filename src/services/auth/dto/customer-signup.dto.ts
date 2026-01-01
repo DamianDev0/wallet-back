@@ -2,10 +2,8 @@ import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
 
 export class CustomerSignUpDto {
   @IsString()
-  firstName: string;
-
-  @IsString()
-  lastName: string;
+  @MinLength(2)
+  fullName: string;
 
   @IsEmail()
   email: string;
@@ -13,8 +11,4 @@ export class CustomerSignUpDto {
   @IsString()
   @MinLength(6)
   password: string;
-
-  @IsOptional()
-  @IsString()
-  phoneNumber?: string;
 }

@@ -32,8 +32,7 @@ export class AuthService {
     return this.jwtService.signToken({
       sub: user.id,
       role,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      fullName: user.fullName,
     });
   }
 
