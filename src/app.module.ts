@@ -4,6 +4,8 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './services/auth/auth.module';
 import { CommonModule } from './common/common.module';
+import { BelvoModule } from './integrations/belvo/belvo.module';
+import { CustomerFinancialModule } from './services/customer-financial/customer-financial.module';
 import { getDatabaseConfig } from './config/database.config';
 import { envValidationSchema } from './config/env.validation';
 import { AuthGuard } from './common/guards/auth.guard';
@@ -22,6 +24,8 @@ import { AuthGuard } from './common/guards/auth.guard';
     TypeOrmModule.forRoot(getDatabaseConfig()),
     CommonModule,
     AuthModule,
+    BelvoModule,
+    CustomerFinancialModule,
   ],
   providers: [
     {

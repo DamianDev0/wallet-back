@@ -26,6 +26,15 @@ export class Customer extends CommonEntity {
   @Column({ type: 'varchar', length: 20, nullable: true })
   phoneNumber: string;
 
+  @Column({ nullable: true, name: 'belvo_link_id' })
+  belvoLinkId?: string;
+
+  @Column({ nullable: true, name: 'belvo_linked_at', type: 'timestamp' })
+  belvoLinkedAt?: Date;
+
+  @Column({ default: false, name: 'belvo_active' })
+  belvoActive: boolean;
+
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {

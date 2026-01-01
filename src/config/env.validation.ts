@@ -19,4 +19,12 @@ export const envValidationSchema = Joi.object({
   // JWT
   JWT_SECRET: Joi.string().required(),
   JWT_EXPIRES_IN: Joi.string().default('24h'),
+
+  // Belvo
+  BELVO_SECRET_ID: Joi.string().required(),
+  BELVO_SECRET_PASSWORD: Joi.string().required(),
+  BELVO_API_URL: Joi.string().default('https://api.belvo.com'),
+  BELVO_ENVIRONMENT: Joi.string()
+    .valid('sandbox', 'production')
+    .default('sandbox'),
 });
