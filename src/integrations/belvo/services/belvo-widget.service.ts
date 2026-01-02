@@ -2,7 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { BelvoBaseService } from './belvo-base.service';
-import { WidgetTokenResponse } from '../interfaces/belvo-widget.interface';
+import {
+  WidgetTokenResponse,
+  CreateWidgetTokenRequest,
+  WidgetConfiguration,
+  FetchResource,
+} from '../interfaces/belvo-widget.interface';
 
 @Injectable()
 export class BelvoWidgetService extends BelvoBaseService {
@@ -13,7 +18,14 @@ export class BelvoWidgetService extends BelvoBaseService {
     super(http, config);
   }
 
-  async createAccessToken(): Promise<WidgetTokenResponse> {
+  async createAccessToken(
+    widgetConfig: WidgetConfiguration,
+    options?: {
+      fetchResources?: FetchResource[];
+      staleIn?: string;
+      scopes?: string;
+    },
+  ): Promise<WidgetTokenResponse> {
     this.logger.log('Creating Belvo Widget access token');
 
     const secretId = this.config.get<string>('belvo.secretId');
@@ -23,9 +35,27 @@ export class BelvoWidgetService extends BelvoBaseService {
       throw new Error('Belvo credentials are missing');
     }
 
-    const payload = {
+    // Valores por defecto según la documentación de Belvo OFDA
+    const fetchResources = options?.fetchResources || [
+      'ACCOUNTS',
+      'TRANSACTIONS',
+      'OWNERS',
+      'BILLS',
+    ];
+
+    const staleIn = options?.staleIn || '365d';
+
+    // Scopes requeridos para OFDA según la documentación
+    const scopes = options?.scopes ||
+      'read_institutions,write_links,read_consents,write_consents,write_consent_callback,delete_consents';
+
+    const payload: CreateWidgetTokenRequest = {
       id: secretId,
       password: secretPassword,
+      scopes,
+      fetch_resources: fetchResources,
+      stale_in: staleIn,
+      widget: widgetConfig,
     };
 
     const response = await this.request<WidgetTokenResponse>(
