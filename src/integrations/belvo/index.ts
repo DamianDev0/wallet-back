@@ -1,5 +1,4 @@
 export * from './belvo.module';
-export * from './belvo.controller';
 
 // Services
 export * from './services/belvo-base.service';
