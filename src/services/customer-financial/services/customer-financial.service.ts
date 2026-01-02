@@ -5,6 +5,7 @@ import { Customer } from '@modules/customer/entities/customer.entity';
 import { BelvoLinksService } from '@integrations/belvo/services/belvo-links.service';
 import { BelvoWidgetService } from '@integrations/belvo/services/belvo-widget.service';
 import { CustomerFinancialSyncService } from './customer-financial-sync.service';
+import { WidgetConfigBuilder } from '@integrations/belvo/builders/widget-config.builder';
 
 @Injectable()
 export class CustomerFinancialService {
@@ -16,10 +17,11 @@ export class CustomerFinancialService {
     private readonly belvoLinksService: BelvoLinksService,
     private readonly belvoWidgetService: BelvoWidgetService,
     private readonly syncService: CustomerFinancialSyncService,
+    private readonly widgetConfigBuilder: WidgetConfigBuilder,
   ) {}
 
   async getWidgetAccessToken(customerId: string) {
-    this.logger.log(`🔵 Creating widget access token for customer: ${customerId}`);
+    this.logger.log(`Creating widget access token for customer: ${customerId}`);
 
     const customer = await this.customerRepository.findOne({
       where: { id: customerId },
@@ -33,15 +35,15 @@ export class CustomerFinancialService {
       throw new BadRequestException('Customer account is not active');
     }
 
-    // Generar access_token temporal de Belvo
-    const tokenResponse = await this.belvoWidgetService.createAccessToken();
+    const widgetConfig = this.widgetConfigBuilder.buildForCustomer(customer.fullName);
+    const tokenResponse = await this.belvoWidgetService.createAccessToken(widgetConfig);
 
-    this.logger.log(`✅ Widget access token created for customer: ${customerId}`);
+    this.logger.log(`Widget access token created for customer: ${customerId}`);
 
     return {
       access_token: tokenResponse.access,
       customer_id: customerId,
-      external_id: customerId, // Esto se usará en el widget
+      external_id: customerId,
     };
   }
 

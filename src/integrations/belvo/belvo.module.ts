@@ -5,6 +5,7 @@ import { BelvoWidgetService } from './services/belvo-widget.service';
 import { BelvoLinksService } from './services/belvo-links.service';
 import { BelvoAccountsService } from './services/belvo-accounts.service';
 import { BelvoTransactionsService } from './services/belvo-transactions.service';
+import { WidgetConfigBuilder } from './builders/widget-config.builder';
 import { belvoConfig } from './config/belvo.config';
 
 @Module({
@@ -21,12 +22,14 @@ import { belvoConfig } from './config/belvo.config';
     BelvoLinksService,
     BelvoAccountsService,
     BelvoTransactionsService,
+    WidgetConfigBuilder,
   ],
   exports: [
     BelvoWidgetService,
     BelvoLinksService,
     BelvoAccountsService,
     BelvoTransactionsService,
+    WidgetConfigBuilder,
   ],
 })
 export class BelvoModule {}
