@@ -41,7 +41,8 @@ export class CustomerFinancialService {
     this.logger.log(`Widget access token created for customer: ${customerId}`);
 
     return {
-      access_token: tokenResponse.access,
+      access: tokenResponse.access,
+      refresh: tokenResponse.refresh,
       customer_id: customerId,
       external_id: customerId,
     };
