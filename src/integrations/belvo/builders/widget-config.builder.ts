@@ -7,6 +7,12 @@ export class WidgetConfigBuilder {
   constructor(private readonly config: ConfigService) {}
 
   build(identificationInfo: IdentificationInfo[]): WidgetConfiguration {
+    const termsUrl = this.config.get<string>('belvo.widget.termsAndConditionsUrl');
+
+    if (!termsUrl || termsUrl === 'https://www.your_terms_and_conditions.com') {
+      throw new Error('BELVO_WIDGET_TERMS_CONDITIONS_URL must be configured with a valid URL in your .env file');
+    }
+
     return {
       openfinance_feature: 'consent_link_creation',
       callback_urls: {
@@ -24,7 +30,7 @@ export class WidgetConfigBuilder {
       },
       consent: {
         purpose: this.config.get<string>('belvo.widget.consentPurpose'),
-        terms_and_conditions_url: this.config.get<string>('belvo.widget.termsAndConditionsUrl'),
+        terms_and_conditions_url: termsUrl,
         permissions: ['REGISTER', 'ACCOUNTS', 'CREDIT_CARDS', 'CREDIT_OPERATIONS'],
         identification_info: identificationInfo,
       },

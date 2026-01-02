@@ -20,7 +20,7 @@ export const belvoConfig = registerAs('belvo', () => {
       termsAndConditionsUrl: process.env.BELVO_WIDGET_TERMS_CONDITIONS_URL || 'https://www.your_terms_and_conditions.com',
       overlayBackgroundColor: process.env.BELVO_WIDGET_OVERLAY_BG_COLOR || '#F0F2F4',
       socialProof: process.env.BELVO_WIDGET_SOCIAL_PROOF === 'true',
-      consentPurpose: process.env.BELVO_WIDGET_CONSENT_PURPOSE || 'Soluções financeiras personalizadas oferecidas por meio de recomendações sob medida, visando melhores ofertas de produtos financeiros e de crédito.',
+      consentPurpose: process.env.BELVO_WIDGET_CONSENT_PURPOSE || 'Soluções financeiras personalizadas por meio de recomendações sob medida para melhores ofertas de crédito.',
       callbackSuccess: process.env.BELVO_WIDGET_CALLBACK_SUCCESS || 'your_deeplink_here://success',
       callbackExit: process.env.BELVO_WIDGET_CALLBACK_EXIT || 'your_deeplink_here://exit',
       callbackEvent: process.env.BELVO_WIDGET_CALLBACK_EVENT || 'your_deeplink_here://error',
