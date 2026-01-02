@@ -66,10 +66,11 @@ export abstract class BelvoBaseService {
     const url = `${this.getApiUrl()}${endpoint}`;
 
     try {
-      this.logger.debug(
-        `[${method.toUpperCase()}] ${url}`,
-        data ? JSON.stringify(data) : '',
+      this.logger.log(
+        `🔵 BELVO REQUEST: [${method.toUpperCase()}] ${url}`,
       );
+      this.logger.log(`🔵 HEADERS:`, JSON.stringify(mergedHeaders, null, 2));
+      this.logger.log(`🔵 PAYLOAD:`, JSON.stringify(data, null, 2));
 
       const response$ = this.http.request<T>({
         method,

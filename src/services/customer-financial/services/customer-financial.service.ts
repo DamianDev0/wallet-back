@@ -2,10 +2,9 @@ import { Injectable, NotFoundException, Logger, BadRequestException } from '@nes
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Customer } from '@modules/customer/entities/customer.entity';
-import { BelvoWidgetService } from '@integrations/belvo/services/belvo-widget.service';
 import { BelvoLinksService } from '@integrations/belvo/services/belvo-links.service';
-import { BelvoAccountsService } from '@integrations/belvo/services/belvo-accounts.service';
-import { BelvoTransactionsService } from '@integrations/belvo/services/belvo-transactions.service';
+import { BelvoWidgetService } from '@integrations/belvo/services/belvo-widget.service';
+import { CustomerFinancialSyncService } from './customer-financial-sync.service';
 
 @Injectable()
 export class CustomerFinancialService {
@@ -14,14 +13,13 @@ export class CustomerFinancialService {
   constructor(
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
-    private readonly belvoWidgetService: BelvoWidgetService,
     private readonly belvoLinksService: BelvoLinksService,
-    private readonly belvoAccountsService: BelvoAccountsService,
-    private readonly belvoTransactionsService: BelvoTransactionsService,
+    private readonly belvoWidgetService: BelvoWidgetService,
+    private readonly syncService: CustomerFinancialSyncService,
   ) {}
 
-  async createWidgetToken(customerId: string) {
-    this.logger.log(`Creating widget token for customer: ${customerId}`);
+  async getWidgetAccessToken(customerId: string) {
+    this.logger.log(`🔵 Creating widget access token for customer: ${customerId}`);
 
     const customer = await this.customerRepository.findOne({
       where: { id: customerId },
@@ -35,17 +33,15 @@ export class CustomerFinancialService {
       throw new BadRequestException('Customer account is not active');
     }
 
-    const tokenResponse = await this.belvoWidgetService.createToken({
-      access_mode: 'single',
-      external_id: customerId,
-    });
+    // Generar access_token temporal de Belvo
+    const tokenResponse = await this.belvoWidgetService.createAccessToken();
 
-    this.logger.log(`Widget token created for customer: ${customerId}`);
+    this.logger.log(`✅ Widget access token created for customer: ${customerId}`);
 
     return {
       access_token: tokenResponse.access,
       customer_id: customerId,
-      external_id: customerId,
+      external_id: customerId, // Esto se usará en el widget
     };
   }
 
@@ -80,11 +76,15 @@ export class CustomerFinancialService {
 
     await this.customerRepository.save(customer);
 
+    // Sincronizar datos automáticamente después de vincular
+    this.logger.log(`Starting automatic sync for customer: ${customerId}`);
+    await this.syncService.syncCustomerData(customerId, linkId);
+
     this.logger.log(`Bank account linked successfully for customer: ${customerId}`);
 
     return {
       success: true,
-      message: 'Bank account linked successfully',
+      message: 'Bank account linked and data synced successfully',
       data: {
         customer_id: customer.id,
         link_id: linkId,
@@ -174,9 +174,8 @@ export class CustomerFinancialService {
 
   async getAccounts(customerId: string) {
     this.logger.log(`Getting accounts for customer: ${customerId}`);
-
-    const customer = await this.ensureCustomerHasLink(customerId);
-    return this.belvoAccountsService.retrieve(customer.belvoLinkId);
+    await this.ensureCustomerHasLink(customerId);
+    return this.syncService.getCustomerAccounts(customerId);
   }
 
   async getTransactions(
@@ -185,21 +184,28 @@ export class CustomerFinancialService {
     dateTo?: string,
   ) {
     this.logger.log(`Getting transactions for customer: ${customerId}`);
-
-    const customer = await this.ensureCustomerHasLink(customerId);
-
-    return this.belvoTransactionsService.retrieve({
-      link_id: customer.belvoLinkId,
-      date_from: dateFrom,
-      date_to: dateTo,
-    });
+    await this.ensureCustomerHasLink(customerId);
+    return this.syncService.getCustomerTransactions(customerId, dateFrom, dateTo);
   }
 
   async getBalances(customerId: string) {
     this.logger.log(`Getting balances for customer: ${customerId}`);
+    const accounts = await this.syncService.getCustomerAccounts(customerId);
+    return accounts.map(account => ({
+      account_id: account.id,
+      account_name: account.name,
+      current_balance: account.currentBalance,
+      available_balance: account.availableBalance,
+      currency: account.currency,
+      last_synced: account.lastSyncedAt,
+    }));
+  }
+
+  async syncData(customerId: string) {
+    this.logger.log(`Manual sync requested for customer: ${customerId}`);
 
     const customer = await this.ensureCustomerHasLink(customerId);
-    return this.belvoAccountsService.getBalances(customer.belvoLinkId);
+    return this.syncService.syncCustomerData(customerId, customer.belvoLinkId);
   }
 
   async getFinancialSummary(customerId: string) {
@@ -207,20 +213,19 @@ export class CustomerFinancialService {
 
     const customer = await this.ensureCustomerHasLink(customerId);
 
-    const [link, accounts, transactions, balances] = await Promise.all([
+    const [link, accounts, transactions] = await Promise.all([
       this.belvoLinksService.getById(customer.belvoLinkId),
-      this.belvoAccountsService.retrieve(customer.belvoLinkId),
-      this.belvoTransactionsService.retrieve({ link_id: customer.belvoLinkId }),
-      this.belvoAccountsService.getBalances(customer.belvoLinkId),
+      this.syncService.getCustomerAccounts(customerId),
+      this.syncService.getCustomerTransactions(customerId, undefined, undefined, 100),
     ]);
 
     const totalBalance = accounts.reduce(
-      (sum, acc) => sum + (acc.balance?.current || 0),
+      (sum, acc) => sum + Number(acc.currentBalance),
       0,
     );
 
     const availableBalance = accounts.reduce(
-      (sum, acc) => sum + (acc.balance?.available || 0),
+      (sum, acc) => sum + Number(acc.availableBalance),
       0,
     );
 
@@ -238,7 +243,6 @@ export class CustomerFinancialService {
       },
       accounts,
       transactions,
-      balances,
       summary: {
         total_accounts: accounts.length,
         total_transactions: transactions.length,

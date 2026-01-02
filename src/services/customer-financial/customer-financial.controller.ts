@@ -8,23 +8,21 @@ import {
   Query,
   HttpCode,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
-import { CustomerFinancialService } from './customer-financial.service';
+import { CustomerFinancialService } from './services/customer-financial.service';
+import { Public } from '@common/decorators/public.decorator';
 
+@Public()
 @Controller('customers/:customerId/financial')
 export class CustomerFinancialController {
-  private readonly logger = new Logger(CustomerFinancialController.name);
-
   constructor(
     private readonly customerFinancialService: CustomerFinancialService,
   ) {}
 
-  @Post('widget/token')
+  @Post('widget-token')
   @HttpCode(HttpStatus.OK)
   async getWidgetToken(@Param('customerId') customerId: string) {
- 
-    return this.customerFinancialService.createWidgetToken(customerId);
+    return this.customerFinancialService.getWidgetAccessToken(customerId);
   }
 
   @Post('link')
@@ -77,5 +75,11 @@ export class CustomerFinancialController {
   @Get('summary')
   async getFinancialSummary(@Param('customerId') customerId: string) {
     return this.customerFinancialService.getFinancialSummary(customerId);
+  }
+
+  @Post('sync')
+  @HttpCode(HttpStatus.OK)
+  async syncData(@Param('customerId') customerId: string) {
+    return this.customerFinancialService.syncData(customerId);
   }
 }

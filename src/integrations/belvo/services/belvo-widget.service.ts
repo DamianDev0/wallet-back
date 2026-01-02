@@ -3,54 +3,59 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { BelvoBaseService } from './belvo-base.service';
 import { WidgetTokenResponse } from '../interfaces/belvo-widget.interface';
-import { CreateWidgetTokenDto } from '../dto/create-widget-token.dto';
-import { BELVO_API_ENDPOINTS } from '../constants/belvo.constants';
 
 @Injectable()
 export class BelvoWidgetService extends BelvoBaseService {
-  constructor(http: HttpService, config: ConfigService) {
+  constructor(
+    http: HttpService,
+    config: ConfigService,
+  ) {
     super(http, config);
   }
 
-  async createToken(
-    dto: CreateWidgetTokenDto = {},
-  ): Promise<WidgetTokenResponse> {
-    this.logger.log('Creating widget access token...');
+  async createAccessToken(): Promise<WidgetTokenResponse> {
+    this.logger.log('Creating Belvo Widget access token');
+
+    const secretId = this.config.get<string>('belvo.secretId');
+    const secretPassword = this.config.get<string>('belvo.secretPassword');
+
+    if (!secretId || !secretPassword) {
+      throw new Error('Belvo credentials are missing');
+    }
 
     const payload = {
-      access_mode: dto.access_mode || 'single',
-      external_id: dto.external_id,
-      callback_url: dto.callback_url,
-      widget: {
-        branding: {
-          company_name: 'Wallet App',
-        },
-      },
+      id: secretId,
+      password: secretPassword,
     };
 
     const response = await this.request<WidgetTokenResponse>(
       'post',
-      BELVO_API_ENDPOINTS.TOKEN,
+      '/api/token/',
       payload,
       {
-        validate: (data: WidgetTokenResponse) => !!data?.access,
-        invalidMsg: 'Invalid widget token response',
+        validate: (data: WidgetTokenResponse) => Boolean(data?.access),
+        invalidMsg: 'Invalid widget access token response',
+        disableDefaultHeaders: true,
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
       },
     );
 
-    this.logger.log('Widget token created successfully');
+    this.logger.log('Widget access token created successfully');
     return response;
   }
 
   async refreshToken(refreshToken: string): Promise<WidgetTokenResponse> {
-    this.logger.log('Refreshing widget token...');
+    this.logger.log('Refreshing widget token');
 
     return this.request<WidgetTokenResponse>(
       'post',
-      BELVO_API_ENDPOINTS.TOKEN,
+      '/api/token/',
       { refresh: refreshToken },
       {
-        validate: (data: WidgetTokenResponse) => !!data?.access,
+        validate: (data: WidgetTokenResponse) => Boolean(data?.access),
         invalidMsg: 'Invalid refresh token response',
       },
     );

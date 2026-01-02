@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
-import { BelvoController } from './belvo.controller';
 import { BelvoWidgetService } from './services/belvo-widget.service';
 import { BelvoLinksService } from './services/belvo-links.service';
 import { BelvoAccountsService } from './services/belvo-accounts.service';
@@ -16,7 +15,7 @@ import { belvoConfig } from './config/belvo.config';
       maxRedirects: 5,
     }),
   ],
-  controllers: [BelvoController],
+  controllers: [],
   providers: [
     BelvoWidgetService,
     BelvoLinksService,
