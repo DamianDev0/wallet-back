@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { WidgetConfiguration, IdentificationInfo } from '../interfaces/belvo-widget.interface';
+import {
+  WidgetConfiguration,
+  IdentificationInfo,
+  FiscalMexicoWidgetConfiguration
+} from '../interfaces/belvo-widget.interface';
 
 @Injectable()
 export class WidgetConfigBuilder {
@@ -65,5 +69,23 @@ export class WidgetConfigBuilder {
     }
 
     return this.build(identificationInfo);
+  }
+
+  buildForFiscalMexico(): FiscalMexicoWidgetConfiguration {
+    return {
+      callback_urls: {
+        success: this.config.get<string>('belvo.widget.callbackSuccess'),
+        exit: this.config.get<string>('belvo.widget.callbackExit'),
+        event: this.config.get<string>('belvo.widget.callbackEvent'),
+      },
+      branding: {
+        company_icon: this.config.get<string>('belvo.widget.companyIcon'),
+        company_logo: this.config.get<string>('belvo.widget.companyLogo'),
+        company_name: this.config.get<string>('belvo.widget.companyName'),
+        company_terms_url: this.config.get<string>('belvo.widget.companyTermsUrl'),
+        overlay_background_color: this.config.get<string>('belvo.widget.overlayBackgroundColor'),
+        social_proof: this.config.get<boolean>('belvo.widget.socialProof'),
+      },
+    };
   }
 }

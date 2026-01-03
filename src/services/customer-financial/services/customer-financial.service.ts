@@ -5,6 +5,7 @@ import { Customer } from '@modules/customer/entities/customer.entity';
 import { BelvoLinksService } from '@integrations/belvo/services/belvo-links.service';
 import { BelvoWidgetService } from '@integrations/belvo/services/belvo-widget.service';
 import { CustomerFinancialSyncService } from './customer-financial-sync.service';
+import { CustomerFiscalSyncService } from './customer-fiscal-sync.service';
 import { WidgetConfigBuilder } from '@integrations/belvo/builders/widget-config.builder';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class CustomerFinancialService {
     private readonly belvoLinksService: BelvoLinksService,
     private readonly belvoWidgetService: BelvoWidgetService,
     private readonly syncService: CustomerFinancialSyncService,
+    private readonly fiscalSyncService: CustomerFiscalSyncService,
     private readonly widgetConfigBuilder: WidgetConfigBuilder,
   ) {}
 
@@ -35,8 +37,10 @@ export class CustomerFinancialService {
       throw new BadRequestException('Customer account is not active');
     }
 
-    const widgetConfig = this.widgetConfigBuilder.buildForCustomer(customer.fullName);
-    const tokenResponse = await this.belvoWidgetService.createAccessToken(widgetConfig);
+    const widgetConfig = this.widgetConfigBuilder.buildForFiscalMexico();
+    const tokenResponse = await this.belvoWidgetService.createAccessToken(widgetConfig, {
+      externalId: customerId,
+    });
 
     this.logger.log(`Widget access token created for customer: ${customerId}`);
 
@@ -65,32 +69,87 @@ export class CustomerFinancialService {
       );
     }
 
-    const link = await this.belvoLinksService.getById(linkId);
+    let link;
 
-    if (link.external_id !== customerId) {
-      throw new BadRequestException(
-        'Link ID does not match customer external ID',
+    try {
+      link = await this.belvoLinksService.getById(linkId);
+
+      if (link.external_id !== customerId) {
+        this.logger.warn(
+          `Link ${linkId} has external_id ${link.external_id}, expected ${customerId}.`
+        );
+
+        if (!link.external_id) {
+          this.logger.log(
+            `Link ${linkId} has no external_id. Accepting this link and will associate with customer ${customerId}.`
+          );
+        } else {
+          this.logger.log('Searching by external_id...');
+          const linkByExternalId = await this.belvoLinksService.getByExternalId(customerId);
+
+          if (!linkByExternalId) {
+            throw new BadRequestException(
+              `Link ${linkId} belongs to different customer (external_id: ${link.external_id})`,
+            );
+          }
+
+          link = linkByExternalId;
+          this.logger.log(
+            `Found link ${link.id} by external_id for customer ${customerId}`
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to get link by ID: ${error.message}. Trying by external_id...`);
+
+      const linkByExternalId = await this.belvoLinksService.getByExternalId(customerId);
+
+      if (!linkByExternalId) {
+        throw new NotFoundException(
+          'Link not found by ID or external_id',
+        );
+      }
+
+      link = linkByExternalId;
+      this.logger.log(
+        `Found link ${link.id} by external_id for customer ${customerId}`
       );
     }
 
-    customer.belvoLinkId = linkId;
+    customer.belvoLinkId = link.id;
     customer.belvoLinkedAt = new Date();
     customer.belvoActive = true;
 
     await this.customerRepository.save(customer);
 
-    // Sincronizar datos automáticamente después de vincular
-    this.logger.log(`Starting automatic sync for customer: ${customerId}`);
-    await this.syncService.syncCustomerData(customerId, linkId);
+    const isFiscalInstitution = link.institution?.includes('_mx_fiscal') || link.institution?.includes('_fiscal');
+
+    if (!isFiscalInstitution) {
+      this.logger.log(`Starting automatic sync for customer: ${customerId}`);
+      try {
+        await this.syncService.syncCustomerData(customerId, link.id);
+      } catch (error) {
+        this.logger.warn(`Sync failed but link was created: ${error.message}`);
+      }
+    } else {
+      this.logger.log(`Fiscal institution detected (${link.institution}). Starting fiscal data sync.`);
+      try {
+        await this.fiscalSyncService.syncFiscalData(customerId, link.id);
+      } catch (error) {
+        this.logger.warn(`Fiscal sync failed but link was created: ${error.message}`);
+      }
+    }
 
     this.logger.log(`Bank account linked successfully for customer: ${customerId}`);
 
     return {
       success: true,
-      message: 'Bank account linked and data synced successfully',
+      message: isFiscalInstitution
+        ? 'Fiscal link created successfully. Use fiscal endpoints to retrieve tax data.'
+        : 'Bank account linked and data synced successfully',
       data: {
         customer_id: customer.id,
-        link_id: linkId,
+        link_id: link.id,
         linked_at: customer.belvoLinkedAt,
         institution: link.institution,
         status: link.status,
@@ -254,6 +313,69 @@ export class CustomerFinancialService {
         currency: accounts[0]?.currency || 'MXN',
       },
     };
+  }
+
+  async syncFiscalData(customerId: string) {
+    this.logger.log(`Manual fiscal sync requested for customer: ${customerId}`);
+
+    const customer = await this.ensureCustomerHasLink(customerId);
+    return this.fiscalSyncService.syncFiscalData(customerId, customer.belvoLinkId);
+  }
+
+  async getInvoices(
+    customerId: string,
+    page?: number,
+    limit?: number,
+    dateFrom?: string,
+    dateTo?: string,
+  ) {
+    this.logger.log(`Getting invoices for customer: ${customerId}`);
+    await this.ensureCustomerHasLink(customerId);
+    return this.fiscalSyncService.getCustomerInvoices(
+      customerId,
+      page,
+      limit,
+      dateFrom,
+      dateTo,
+    );
+  }
+
+  async getTaxReturns(customerId: string, page?: number, limit?: number) {
+    this.logger.log(`Getting tax returns for customer: ${customerId}`);
+    await this.ensureCustomerHasLink(customerId);
+    return this.fiscalSyncService.getCustomerTaxReturns(customerId, page, limit);
+  }
+
+  async getInvoiceById(customerId: string, invoiceId: string) {
+    this.logger.log(`Getting invoice ${invoiceId} for customer: ${customerId}`);
+    await this.ensureCustomerHasLink(customerId);
+
+    const invoice = await this.fiscalSyncService.getInvoiceById(invoiceId);
+
+    if (!invoice || invoice.customerId !== customerId) {
+      throw new NotFoundException('Invoice not found');
+    }
+
+    return invoice;
+  }
+
+  async getTaxReturnById(customerId: string, taxReturnId: string) {
+    this.logger.log(`Getting tax return ${taxReturnId} for customer: ${customerId}`);
+    await this.ensureCustomerHasLink(customerId);
+
+    const taxReturn = await this.fiscalSyncService.getTaxReturnById(taxReturnId);
+
+    if (!taxReturn || taxReturn.customerId !== customerId) {
+      throw new NotFoundException('Tax return not found');
+    }
+
+    return taxReturn;
+  }
+
+  async getFiscalSyncStatus(customerId: string) {
+    this.logger.log(`Getting fiscal sync status for customer: ${customerId}`);
+    await this.ensureCustomerHasLink(customerId);
+    return this.fiscalSyncService.getSyncStatus(customerId);
   }
 
   private async ensureCustomerHasLink(customerId: string): Promise<Customer> {

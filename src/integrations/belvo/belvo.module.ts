@@ -5,6 +5,8 @@ import { BelvoWidgetService } from './services/belvo-widget.service';
 import { BelvoLinksService } from './services/belvo-links.service';
 import { BelvoAccountsService } from './services/belvo-accounts.service';
 import { BelvoTransactionsService } from './services/belvo-transactions.service';
+import { BelvoInvoicesService } from './services/belvo-invoices.service';
+import { BelvoTaxReturnsService } from './services/belvo-tax-returns.service';
 import { WidgetConfigBuilder } from './builders/widget-config.builder';
 import { belvoConfig } from './config/belvo.config';
 
@@ -22,6 +24,8 @@ import { belvoConfig } from './config/belvo.config';
     BelvoLinksService,
     BelvoAccountsService,
     BelvoTransactionsService,
+    BelvoInvoicesService,
+    BelvoTaxReturnsService,
     WidgetConfigBuilder,
   ],
   exports: [
@@ -29,6 +33,8 @@ import { belvoConfig } from './config/belvo.config';
     BelvoLinksService,
     BelvoAccountsService,
     BelvoTransactionsService,
+    BelvoInvoicesService,
+    BelvoTaxReturnsService,
     WidgetConfigBuilder,
   ],
 })

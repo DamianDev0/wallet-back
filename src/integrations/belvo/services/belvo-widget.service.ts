@@ -24,6 +24,8 @@ export class BelvoWidgetService extends BelvoBaseService {
       fetchResources?: FetchResource[];
       staleIn?: string;
       scopes?: string;
+      credentialsStorage?: string;
+      externalId?: string;
     },
   ): Promise<WidgetTokenResponse> {
     this.logger.log('Creating Belvo Widget access token');
@@ -35,19 +37,17 @@ export class BelvoWidgetService extends BelvoBaseService {
       throw new Error('Belvo credentials are missing');
     }
 
-    // Valores por defecto según la documentación de Belvo OFDA
     const fetchResources = options?.fetchResources || [
-      'ACCOUNTS',
-      'TRANSACTIONS',
-      'OWNERS',
-      'BILLS',
+      'FINANCIAL_STATEMENTS',
+      'INVOICES',
+      'TAX_COMPLIANCE_STATUS',
+      'TAX_RETENTIONS',
+      'TAX_RETURNS',
+      'TAX_STATUS',
     ];
 
-    const staleIn = options?.staleIn || '365d';
-
-    // Scopes requeridos para OFDA según la documentación
-    const scopes = options?.scopes ||
-      'read_institutions,write_links,read_consents,write_consents,write_consent_callback,delete_consents';
+    const staleIn = options?.staleIn || '42d';
+    const scopes = options?.scopes || 'read_institutions,write_links';
 
     const payload: CreateWidgetTokenRequest = {
       id: secretId,
@@ -57,6 +57,14 @@ export class BelvoWidgetService extends BelvoBaseService {
       stale_in: staleIn,
       widget: widgetConfig,
     };
+
+    if (options?.credentialsStorage) {
+      payload.credentials_storage = options.credentialsStorage;
+    }
+
+    if (options?.externalId) {
+      payload.external_id = options.externalId;
+    }
 
     const response = await this.request<WidgetTokenResponse>(
       'post',

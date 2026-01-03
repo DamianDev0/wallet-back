@@ -29,6 +29,7 @@ export class BelvoLinksService extends BelvoBaseService {
     page?: number;
     page_size?: number;
     institution?: string;
+    external_id?: string;
   }): Promise<{ count: number; results: BelvoLink[] }> {
     this.logger.log('Listing links...');
 
@@ -42,6 +43,21 @@ export class BelvoLinksService extends BelvoBaseService {
         invalidMsg: 'Invalid links list response',
       },
     );
+  }
+
+  async getByExternalId(externalId: string): Promise<BelvoLink | null> {
+    this.logger.log(`Fetching link by external_id: ${externalId}`);
+
+    const response = await this.list({
+      external_id: externalId,
+      page_size: 1,
+    });
+
+    if (response.results && response.results.length > 0) {
+      return response.results[0];
+    }
+
+    return null;
   }
 
   async delete(linkId: string): Promise<void> {

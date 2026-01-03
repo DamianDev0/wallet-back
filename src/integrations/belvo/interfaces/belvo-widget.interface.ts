@@ -37,6 +37,22 @@ export interface WidgetConsent {
 }
 
 export interface WidgetConfiguration {
+  openfinance_feature?: 'consent_link_creation';
+  callback_urls: WidgetCallbackUrls;
+  branding: WidgetBranding;
+  theme?: WidgetTheme[];
+  consent?: WidgetConsent;
+}
+
+// Widget Configuration específica para México Fiscal
+export interface FiscalMexicoWidgetConfiguration {
+  callback_urls: WidgetCallbackUrls;
+  branding: WidgetBranding;
+  theme?: WidgetTheme[];
+}
+
+// Widget Configuration específica para Open Finance Brasil
+export interface OpenFinanceBrasilWidgetConfiguration {
   openfinance_feature: 'consent_link_creation';
   callback_urls: WidgetCallbackUrls;
   branding: WidgetBranding;
@@ -54,7 +70,13 @@ export type FetchResource =
   | 'EXHANGES'
   | 'INCOMES'
   | 'RECURRING_EXPENSES'
-  | 'RISK_INSIGHTS';
+  | 'RISK_INSIGHTS'
+  | 'FINANCIAL_STATEMENTS'
+  | 'INVOICES'
+  | 'TAX_COMPLIANCE_STATUS'
+  | 'TAX_RETENTIONS'
+  | 'TAX_RETURNS'
+  | 'TAX_STATUS';
 
 export interface CreateWidgetTokenRequest {
   id: string;
@@ -62,5 +84,7 @@ export interface CreateWidgetTokenRequest {
   scopes: string;
   fetch_resources: FetchResource[];
   stale_in: string;
+  credentials_storage?: string;
+  external_id?: string;
   widget: WidgetConfiguration;
 }
